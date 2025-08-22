@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { useReducer } from "react";
 
 const userSchema = new mongoose.Schema(
     {
@@ -53,7 +52,7 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) { // pre hook to do something before saving, or whatever is specified
     if(!this.isModified("password")) return next(); // hash password only when password field is modified
 
-    this.password = bcrypt.hash(this.password, 10) // to hash the password based on the number(10) of rounds specified, before saving it
+    this.password = await bcrypt.hash(this.password, 10) // to hash the password based on the number(10) of rounds specified, before saving it
     next() // necessary called, to pass it to the next controller or middleware
 })
 
