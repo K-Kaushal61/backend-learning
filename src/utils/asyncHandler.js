@@ -1,16 +1,18 @@
-// const asyncHandler = () => {}
-// const asyncHandler = (func) => {() => {}}
-// const asyncHandler = (func) => async () => {}
+// HELPER FILE
+
 
 // this is using the promises, which is mostly production grade
 const asyncHandler = (requestHandler) =>  {
-    (req, res, next) => {
+    return (req, res, next) => {
         Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err))
     }
 }
 
 export { asyncHandler }
 
+// const asyncHandler = () => {}
+// const asyncHandler = (func) => {() => {}}
+// const asyncHandler = (func) => async () => {}
 
 /* this is using the try-catch block, to handle requests
 const asyncHandler = (requestHandler) => async (req, res, next) => {

@@ -15,4 +15,11 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" })) //to configure th
 app.use(express.static("public")) // static assets
 app.use(cookieParser())
 
+// routes
+import userRouter from "./routes/user.routes.js";
+
+// routes declaration
+app.use("/api/v1/users", userRouter, ) // gives control further to userRouter route / makes it as a prefix in the url
+//http://localhost:8000/api/v1/users/(userRouter)
+
 export { app }
