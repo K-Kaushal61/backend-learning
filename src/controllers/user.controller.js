@@ -20,7 +20,6 @@ const resgisterUser = asyncHandler( async (req, res) => {
         // return response
 
     const {fullName, email, username, password} = req.body
-    console.log("email: ", email);
 
     if (
         [fullName, email, username, password].some( (field) => field?.trim() === "" ) // many such validation conditions can be checked
@@ -29,21 +28,25 @@ const resgisterUser = asyncHandler( async (req, res) => {
     }
 
     const existingUser = await User.findOne({
-        $or: [{username}, {email}], // "or" to check if any one is found -> find existing user
-    })
-    
+        $or: [{ email: req.body.email }, { username: req.body.username }]
+    });
+
     if (existingUser) {
-        throw new ApiError(409, "Email or Username already exists.") // throw error if existing user
+    // console.log("Checking for existing user with: ", req.body.email, req.body.username);
+    // console.log("Found user: ", req.body.username);
+
+    throw new ApiError(409, "Email or Username already exists."); 
     }
 
-    const avaterLocalPath = req.files?.avatar[0]?.path; // local path is taken from fronten of file
+
+    const avatarLocalPath = req.files?.avatar[0]?.path; // local path is taken from fronten of file
     const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
-    if (!avaterLocalPath) {
+    if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar is required.") // check for avatar file
     }
 
-    const avatar = await uploadCloudinary(avaterLocalPath) // file can take time to upload
+    const avatar = await uploadCloudinary(avatarLocalPath) // file can take time to upload
     const coverImage = await uploadCloudinary(coverImageLocalPath) // file can take time to upload
 
     if (!avatar) {
@@ -59,16 +62,16 @@ const resgisterUser = asyncHandler( async (req, res) => {
         username: username.toLowerCase()
     })
 
-    const createdUser = await User.findById(user._id).select( // fetching the new created user
+    const createdUser = await User.findById(user._id).select( // fetching the new created user 
         "-password -refreshToken" // by default all fields are selected to subtract the unwanted ones
     )
 
     if(!createdUser){
-        throw new ApiError(500, "Something went wrong while registring a user.")
+        throw new ApiError(500, "Something went wrong while registering a user.")
     }
 
     return res.status(201).json(
-        new ApiResponse(200, createdUser, "User registerd")
+        new ApiResponse(201, createdUser, "User registered")
     )
 
 })
