@@ -6,6 +6,22 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 
 // handles the client request -> no error ? ok report : middleware takes over
 
+const generateAccessAndRefreshToken = async(userId) => {
+    try {
+        const user = await User.findById(userId)
+        const accessToken = user.generateAccessToken()
+        const refreshToken = user.generateRefreshToken()
+
+        user.refreshToken = refreshToken // assign it to the refresh token field of the user model
+        await user.save({ validateBeforeSave: false }) // save refresh token in data -> no validation so that other required fields are not checked
+
+        return {accessToken, refreshToken}
+
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong while generating refresh and access token.")
+    }
+}
+
 const resgisterUser = asyncHandler( async (req, res) => {
 
     // BASIC/COMMON STEPS FOR REGISTERING A USER:
@@ -76,4 +92,87 @@ const resgisterUser = asyncHandler( async (req, res) => {
 
 })
 
-export {resgisterUser}
+const loginUser = asyncHandler( async (req, res) => {
+
+    // take data from user
+    // username or email check
+    // verify registered data
+    // password check
+    // access token and refresh generate
+    // send cookie
+    // user login done
+
+    const {email, username, password} = req.body;
+
+    if(!(username && email)){
+        throw new ApiError(400, "Credentials incorrect");
+    }
+
+    const user = await User.findOne({  // User is from mongoose || user is the model we created
+        $or: [{username}, {email}]
+    })
+
+    if(!user){
+        throw new ApiError(404, "User not found.")
+    }
+    
+    const isPasswordValid = await user.isPasswordCorrect(password)
+    
+    if(!isPasswordValid){
+        throw new ApiError(401, "Password incorrect.")
+    }
+
+    const {refreshToken, accessToken} = await generateAccessAndRefreshToken(user._id)
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken") // check if calling DB again is expensive, update the existing object, if not then do this step
+
+    const options = {
+        httpOnly: true,
+        secure: false // is true -> only works for "https" -> for localenv, keep it false
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                user: loggedInUser, accessToken, refreshToken
+            },
+            "User logged in successfully"
+        )
+    )
+})
+
+const logoutUser = asyncHandler( async (req, res) => {
+
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: false // is true -> only works for "https" -> for localenv, keep it false
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(
+        200,
+        {},
+        "User logged out"
+    ))
+
+})
+
+export {resgisterUser, loginUser, logoutUser}
